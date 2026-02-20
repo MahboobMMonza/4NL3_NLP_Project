@@ -88,6 +88,9 @@ class PhishAnnotator:
             for col in ['annotation1', 'annotation2']:
                 if col not in df.columns:
                     df[col] = pd.NA
+
+                df[col] = pd.to_numeric(df[col], errors="coerce").astype("Int64")
+
             return df, path
         except Exception as e:
             messagebox.showerror("Error", f"Pandas failed to read CSV:\n{e}")
@@ -114,8 +117,8 @@ class PhishAnnotator:
             messagebox.showwarning("Incomplete", "Not enough double-labeled data for statistics.")
             return
 
-        y1 = pd.to_numeric(overlap['annotation1']).astype(int)
-        y2 = pd.to_numeric(overlap['annotation2']).astype(int)
+        y1 = pd.to_numeric(overlap['annotation1']).astype('Int64')
+        y2 = pd.to_numeric(overlap['annotation2']).astype('Int64')
         total = len(y1)
         po = (y1 == y2).sum() / total
         p1_phish = (y1 == 1).sum() / total
