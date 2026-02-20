@@ -1,15 +1,19 @@
+from idlelib.format import FormatRegion
+
 import pandas as pd
 import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
 from pathlib import Path
 
 # --- STYLING CONSTANTS ---
-BG_MAIN = "#f5f6f7"
-BG_CARD = "#ffffff"
-ACCENT_BLUE = "#0078d4"
-SUCCESS_GREEN = "#28a745"
-DANGER_RED = "#dc3545"
-TEXT_MAIN = "#323130"
+BG_MAIN = "#121212"
+BG_CARD = "#1e1e1e"
+ACCENT_BLUE = "#00a2ed"
+SUCCESS_GREEN = "#1e7e34"
+DANGER_RED = "#bd2130"
+TEXT_MAIN = "#e0e0e0"
+TEXT_DIM = "#b0b0b0"
+BORDER = "#333333"
 
 class PhishAnnotator:
     def __init__(self, root):
@@ -31,12 +35,15 @@ class PhishAnnotator:
 
         # Label styles
         style.configure("TLabel", background=BG_MAIN, foreground=TEXT_MAIN, font=("Segoe UI", 10))
-        style.configure("Header.TLabel", font=("Segoe UI", 14, "bold"))
+        style.configure("Header.TLabel", font=("Segoe UI", 14, "bold"), foreground=TEXT_MAIN)
+
+        # Input styles
+        style.configure("TEntry", fieldbackground=BG_CARD, foreground=TEXT_MAIN, insertcolor="white")
 
         # Button styles
-        style.configure("TButton", font=("Segoe UI", 10))
+        style.configure("TButton", font=("Segoe UI", 10), background=BG_MAIN, foreground=TEXT_MAIN)
         style.configure("Action.TButton", foreground="white", background=ACCENT_BLUE)
-        style.map("Action.TButton", background=[('active', '#106ebe')])
+        style.map("Action.TButton", background=[('active', '#0078d4')])
 
     def create_widgets(self):
         main_container = ttk.Frame(self.root, padding="30")
@@ -166,15 +173,24 @@ class AnnotationWindow:
         self.info_lbl.pack(side="left")
 
         # Email Card
-        card = tk.Frame(self.win, bg=BG_CARD, padx=20, pady=20, relief="solid", borderwidth=1)
+        card = tk.Frame(self.win, bg=BG_CARD, padx=20, pady=20, relief="solid", borderwidth=1,
+                        highlightbackground=BORDER)
         card.pack(fill="both", expand=True, padx=40, pady=10)
 
-        self.meta_lbl = tk.Label(card, justify="left", anchor="w", bg=BG_CARD, font=("Segoe UI", 10), fg="#605e5c")
+        self.meta_lbl = tk.Label(card, justify="left", anchor="w", bg=BG_CARD, font=("Segoe UI", 10), fg=TEXT_DIM)
         self.meta_lbl.pack(fill="x")
 
         tk.Frame(card, height=1, bg="#edebe9").pack(fill="x", pady=15)
 
-        self.body_text = scrolledtext.ScrolledText(card, font=("Segoe UI", 11), wrap="word", relief="flat", bg=BG_CARD)
+        self.body_text = scrolledtext.ScrolledText(
+            card,
+            font=("Segoe UI", 11),
+            wrap="word",
+            relief="flat",
+            bg=BG_CARD,
+            fg=TEXT_MAIN,
+            insertbackground="white",
+        )
         self.body_text.pack(fill="both", expand=True)
 
         # Footer Controls
