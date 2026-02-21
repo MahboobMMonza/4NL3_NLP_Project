@@ -221,7 +221,7 @@ class AnnotationWindow:
         pct = ((self.pointer + 1) / len(self.indices)) * 100
         self.progress['value'] = pct
 
-        status = "NOT LABELED" if pd.isna(row[self.col]) else f"CURRENT: {row[self.col]}"
+        status = "NOT LABELED" if pd.isna(row[self.col]) else f"CURRENT: {'SPAM' if row[self.col] == 1 else 'LEGIT'}"
         self.info_lbl.config(text=f"ROW {real_idx + 1} | {status} ({self.pointer + 1}/{len(self.indices)})")
 
         meta = f"FROM: {row['sender']}\nTO: {row['receiver']}\nDATE: {row['date']}\nSUBJECT: {row['subject']}"
