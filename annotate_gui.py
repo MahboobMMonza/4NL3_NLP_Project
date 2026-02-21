@@ -1,9 +1,8 @@
-from idlelib.format import FormatRegion
+import tkinter as tk
+from pathlib import Path
+from tkinter import messagebox, scrolledtext, ttk
 
 import pandas as pd
-import tkinter as tk
-from tkinter import messagebox, scrolledtext, ttk
-from pathlib import Path
 
 # --- STYLING CONSTANTS ---
 BG_MAIN = "#121212"
@@ -14,6 +13,7 @@ DANGER_RED = "#bd2130"
 TEXT_MAIN = "#e0e0e0"
 TEXT_DIM = "#b0b0b0"
 BORDER = "#333333"
+
 
 class PhishAnnotator:
     def __init__(self, root):
@@ -27,7 +27,7 @@ class PhishAnnotator:
 
     def setup_styles(self):
         style = ttk.Style()
-        style.theme_use('clam') # 'clam' allows for better color customization
+        style.theme_use('clam')  # 'clam' allows for better color customization
 
         # Frame styles
         style.configure("TFrame", background=BG_MAIN)
@@ -138,13 +138,16 @@ class PhishAnnotator:
         stats_win.geometry("350x300")
         stats_win.configure(bg=BG_CARD)
 
-        content = f"Samples: {total}\nRaw Agreement: {po*100:.1f}%\n\nCohen's Kappa: {kappa:.3f}"
-        tk.Label(stats_win, text="Agreement Analysis", font=("Segoe UI", 12, "bold"), bg=BG_CARD).pack(pady=20)
-        tk.Label(stats_win, text=content, font=("Courier New", 11), bg=BG_CARD, justify="left").pack(pady=10)
+        content = f"Samples: {total}\nRaw Agreement: {po * 100:.1f}%\n\nCohen's Kappa: {kappa:.3f}"
+        tk.Label(stats_win, text="Agreement Analysis", font=("Segoe UI", 12, "bold"), bg=BG_CARD,
+                 fg=TEXT_MAIN).pack(pady=20)
+        tk.Label(stats_win, text=content, font=("Courier New", 11), bg=BG_CARD, justify="left",
+                 fg=TEXT_MAIN).pack(pady=10)
 
         # Interpretation image-like logic
         interp = "Interpretation: " + ("Good" if 0.6 <= kappa <= 0.8 else "Excellent" if kappa > 0.8 else "Fair/Poor")
-        tk.Label(stats_win, text=interp, font=("Segoe UI", 10, "italic"), bg=BG_CARD).pack(pady=5)
+        tk.Label(stats_win, text=interp, font=("Segoe UI", 10, "italic"), bg=BG_CARD, fg=TEXT_MAIN).pack(pady=5)
+
 
 class AnnotationWindow:
     def __init__(self, parent, df, path, col, start, end):
@@ -253,7 +256,8 @@ class AnnotationWindow:
                 self.update_view()
             else:
                 messagebox.showinfo("Limit", "That row is outside the current range.")
-        except ValueError: pass
+        except ValueError:
+            pass
 
     def bind_keys(self):
         self.win.bind("<Escape>", lambda e: self.save_exit())
@@ -265,6 +269,7 @@ class AnnotationWindow:
     def save_exit(self):
         self.df.to_csv(self.path, index=False)
         self.win.destroy()
+
 
 if __name__ == "__main__":
     root = tk.Tk()
