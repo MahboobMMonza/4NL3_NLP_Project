@@ -242,7 +242,8 @@ class AnnotationWindow:
         new_ptr = self.pointer + step
         if 0 <= new_ptr < len(self.indices):
             self.pointer = new_ptr
-            self.update_view()
+
+        self.update_view()
 
     def jump(self):
         try:
