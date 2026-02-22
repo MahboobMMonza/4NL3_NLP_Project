@@ -1,13 +1,19 @@
+'''
+AI was used to help with implementing cohen's kappa using pandas (2 prompts) 
+and to cast the annotation columns to nullable integers (1 prompt).
+Total CO2 emissions from AI usage: 4.32 * 3 = 12.96g of CO2.
+'''
+
 import pandas as pd
 import sys
 
-# Raw agreement and Cohen's Kappa
+# Cohen's Kappa
 def calculate_agreement(df):
     # Filter for rows where both team members annotated
     overlap = df[df['annotation1'].notna() & df['annotation2'].notna()].copy()
     
     if len(overlap) < 2:
-        print("\n[!] Not enough double-annotated data (need at least 2 rows).")
+        print("\nNot enough double annotated data to calculate agreement.")
         return
 
     # Convert to numeric for math
@@ -15,26 +21,21 @@ def calculate_agreement(df):
     y2 = pd.to_numeric(overlap['annotation2']).astype(int)
     
     total = len(y1)
-    # 1. Observed Agreement (Po)
+    # Observed Agreement (Po)
     po = (y1 == y2).sum() / total
     
-    # 2. Expected Agreement (Pe) - Probability of agreeing by chance
+    # Expected Agreement (Pe) - Probability of agreeing by chance
     p1_phish = (y1 == 1).sum() / total
     p2_phish = (y2 == 1).sum() / total
     pe = (p1_phish * p2_phish) + ((1 - p1_phish) * (1 - p2_phish))
     
-    # 3. Kappa Calculation
+    # Cohen's Kappa Calculation
     kappa = (po - pe) / (1 - pe) if pe < 1 else 1.0
 
-    print("\n" + "═"*40)
     print(f"{'TEAM AGREEMENT (COHEN KAPPA)':^40}")
     print("═"*40)
-    print(f"Overlap Samples:  {total}")
-    print(f"Raw Agreement:    {po*100:.2f}%")
+    print(f"Double Annotated Samples:  {total}")
     print(f"Cohen's Kappa:    {kappa:.3f}")
-    print("-" * 40)
-    print("Interpretation: 0.6-0.8 Good, >0.8 Excellent")
-    print("═"*40 + "\n")
 
     
 def annotate_data(file_path, start_idx=0, end_idx=None):
@@ -70,9 +71,6 @@ def annotate_data(file_path, start_idx=0, end_idx=None):
         # Decide which slot to fill, fill annotation1 first, then annotation2
         target_col = 'annotation1' if pd.isna(df.at[i, 'annotation1']) else 'annotation2'
         
-        if target_col == 'annotation2':
-            print(f"*** DOUBLE ANNOTATION MODE ***")
-        
         prompt = "Label (0=Legit, 1=Phish, q=Quit): "
         label = input(prompt).strip().lower()
         
@@ -90,7 +88,7 @@ def annotate_data(file_path, start_idx=0, end_idx=None):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  python annotate.py your_data.csv [start_index]  <- To Annotate")
+        print("  python annotate.py your_data.csv [start_index] [end_index]  <- To Annotate")
         print("  python annotate.py your_data.csv --stats        <- To Check Agreement")
         sys.exit(1)
 
@@ -111,4 +109,4 @@ if __name__ == "__main__":
         except FileNotFoundError:
             print("Error: File not found.")
         except ValueError:
-            print("Error: Start index must be a number.")
+            print("Error: Start/End index must be a number.")
