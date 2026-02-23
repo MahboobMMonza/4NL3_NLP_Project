@@ -1,3 +1,14 @@
+'''
+AI was used to make this GUI annotator based on prompts explaining all windows
+
+HARDWARE: TPUv3
+HOURS USED: 10 (overestimated to account for training and chip difference on calculator)
+PROVIDER: Google Cloud Platform
+REGION: northamerica-northeast-1
+TOTAL EMISSIONS: 0.08 kg CO2
+TOTAL OFFSET BY GOOGLE: 0.08 kg CO2
+'''
+
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox, scrolledtext, ttk
