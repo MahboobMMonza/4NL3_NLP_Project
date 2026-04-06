@@ -17,6 +17,7 @@
 \usepackage{microtype}
 \usepackage{inconsolata}
 \usepackage{graphicx}
+\usepackage{listings}
 
 % If the title and author information does not fit in the area allocated, uncomment the following
 %
@@ -92,6 +93,7 @@ Early machine learning work by \citet{Fette2007} demonstrated that a Random Fore
 
 More recently, deep learning techniques have advanced the state of the art. \citet{Alhogail2021} proposed a Graph Convolutional Network applied to email body text, reaching approximately 98\% accuracy and showing that representation-learning methods can capture subtle semantic patterns that traditional feature engineering misses. The success of pre-trained language models such as BERT \citep{Devlin2019} has significantly impacted the field. Fine-tuned transformer models have been shown to exceed a 95\% F1-score on phishing benchmarks by leveraging contextual word embeddings that capture the nuanced phrasing characteristic of social-engineering attacks.
 
+
 This project draws on insights from both traditional and neural approaches. The curated phishing email corpus released by \citet{Champa2024} was utilized, which aggregates data from the TREC, SpamAssassin, and CEAS corpora. The subsequent experiments evaluate Bag-of-Words baselines alongside fine-tuned transformer architectures to identify the most effective strategy for the balanced dataset.
 
 \section{Dataset}
@@ -139,12 +141,45 @@ Because the dataset contains real-world emails from public archives, evaluators 
 
 \section{Features}
 
-Describe any features you used for your model, or how your data was input to your model. Are you doing feature engineering or feature selection? Are you learning embeddings? Is it all part of one neural network? Refer to item 3. This may range from 0.25 pages to 0.5 pages.
-
 \subsection{Model 1: RoBERTa and TF-IDF Ensemble}
 To capture both semantic meaning and structural metadata, a single text input was created for each email by concatenating the sender's domain, the subject line, and the email body. The subject line was included twice in this string to increase its weighting in the text representation, which makes sense because subjects often contain the strongest and most immediate indicators of phishing attempts (such as false urgency or administrative threats).
 
 Two distinct feature representations were used to vary the experiments. For the Logistic Regression branch, the text was transformed using TF-IDF on both word n-grams (unigrams to trigrams) and character n-grams (3 to 5 characters). This static sparse representation captures specific phrases and unusual spellings. In addition to the text features, seven numeric features were engineered: the character lengths of the subject and body, the counts of URLs, exclamation marks, dollar signs, a count of urgent keywords (such as ``password'', ``suspended'', and ``verify''), and a binary flag for the presence of URLs. These features were explicitly added because phishing heavily relies on malicious links, aggressive exclamation formatting, and fabricated urgency to deceive users. For the Transformer branch, rather than static representations, the model utilized dynamic contextual word embeddings. The engineered text was encoded using the \texttt{roberta-base} tokenizer, and the embeddings were learned entirely as part of the model, specifically truncated to a maximum length of 512 tokens. Feature selection was also naturally performed, as the TF-IDF vocabulary was capped at the most frequent 80,000 word and 30,000 character n-grams.
+
+\subsection{Model 2: Random Forest Classifier}
+For the Random Forest Classifier, the text input was created by concatenating the \textit{subject} and \textit{body} fields from the dataset, separated by a space. Initial tokens were generated via lowercasing and space separation. These tokens underwent further preprocessing to remove punctuation and stop-words, and each token was subsequently stemmed using the \texttt{nltk} \texttt{PorterStemmer} before being rejoined. The resulting text was then passed through a \texttt{CountVectorizer} for the bag-of-words vectorization required by the classifier.
+
+The \textit{subject} and \textit{body} fields were concatenated to ensure the model could access all primary plain-text data within an email, making it robustly tokenizable without overly complex preprocessing. This approach also provides a larger contextual window to improve model accuracy. Given the bag-of-words representation, this functions as a form of feature engineering where the frequency or existence of specific tokens (such as language commonly used to advertise explicit content) can be learned by the model to classify the contents as phishing.
+
+Finally, case normalization, stop-word removal, and stemming were implemented to drastically reduce the vocabulary size while maintaining the dataset's key distinguishing features.
+
+\subsection{Model 3: RoBERTa Base}
+Because this approach utilizes a fine-tuned architecture, representation learning was prioritized to take full advantage of the pretrained attention transformer. To effectively utilize this capacity, the text input was formatted as follows:
+
+\begin{lstlisting}[
+  caption={Input format for the RoBERTa model.},
+  label={lst:rob_input_format}
+]
+[SUBJECT] <{Subject content}>
+[BODY] <{Body content}>
+[SENDER] <{Sender content}>
+\end{lstlisting}
+
+This structured format allowed RoBERTa's contextualized embeddings to distinctly separate \textit{subject}, \textit{body}, and \textit{sender} information during processing. The specific concatenation order was chosen so that the primary email contents were prioritized during tokenization prior to the sender identity. This ordering helps prevent legitimate but infrequent communicators from being incorrectly flagged as phishing.
+
+\subsection{Model 4: ELECTRA Base}
+Similarly, because ELECTRA is a fine-tuned architecture, representation learning was prioritized to leverage the pretrained attention transformer. To utilize this capacity natively, the text input was formatted as follows:
+
+\begin{lstlisting}[
+  caption={Input format for the ELECTRA model.},
+  label={lst:elc_input_format}
+]
+[SENDER] <{Sender content}>
+[SUBJECT] <{Subject content}>
+[BODY] <{Body content}>
+\end{lstlisting}
+
+This layout allowed ELECTRA's contextualized embeddings to distinctly separate \textit{sender}, \textit{subject}, and \textit{body} information. The specific order was selected because it mirrors the natural flow of information in a standard email. Furthermore, because ELECTRA operates as a discriminative model, providing the sender identity first allows it to aggressively prioritize address identification when determining if an email originates from a phishing source.
 
 \section{Implementation}
 
