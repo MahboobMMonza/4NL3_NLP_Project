@@ -75,15 +75,67 @@
 
 \section{Introduction}
 
-Here, write a brief introduction to the problem you are solving. This can be adapted from your problem description and motivation from the original proposal. This should be around 0.25-0.5 pages.
+
+Phishing emails remain one of the most common cybersecurity threats out there. They cost organizations billions of dollars annually and lead to large-scale data breaches and identity theft \citep{Almomani2013}. These fraudulent messages are designed to deceive recipients into giving up sensitive information -- such as passwords, bank credentials, or personal data -- often by mimicking legitimate communications from trusted brands or companies. While modern spam filters intercept many obvious threats, more sophisticated phishing attempts closely imitate the language and formatting of genuine emails, allowing them to evade traditional rule-based detection systems.
+
+The goal of this project is to develop a Natural Language Processing (NLP) classifier capable of accurately distinguishing phishing emails from legitimate ones. By framing the problem as a binary text classification task, we aim to provide an additional layer of automated protection that can reduce the success rate of phishing attacks. Several challenges make this task difficult: phishing emails often employ language that closely mirrors legitimate messages, the linguistic strategies used by attackers evolve continuously to get around existing filters, and class imbalance is a recurring concern since phishing emails are typically far less common than legitimate emails in real-world settings.
+
+To address these challenges, we curate a balanced dataset drawn from well-known public email corpora and explore both traditional machine learning approaches---such as Bag-of-Words with Logistic Regression---and modern transformer-based models. We evaluate our classifiers using F1-score as the primary metric, supplemented by accuracy, precision, and recall, to ensure a balanced assessment of phishing detection performance.
 
 \section{Related Work}
 
-Here, talk about the related work you encountered for your approach. Cite at least 5 references. Refer to item 1. No one has done exactly your task? Write about the most similar thing you can find. This should be around 0.25-0.5 pages.
+Phishing email detection has been studied extensively in both the cybersecurity and NLP communities. \citet{Almomani2013} provide a comprehensive survey of phishing email filtering techniques, categorizing approaches into list-based, heuristic, visual-similarity, and machine-learning methods, and highlighting that content-based machine learning classifiers consistently outperform static rule sets as phishing tactics evolve.
+
+Early machine-learning work by \citet{Fette2007} demonstrated that a Random Forest classifier trained on hand-crafted features -- including the presence of URLs, the structure of embedded links, and the use of JavaScript -- could identify phishing emails with over 96\% accuracy. In a complementary study, \citet{AbuNimeh2007} compared Logistic Regression, Support Vector Machines, Bayesian Additive Regression Trees, and Neural Networks on a bag-of-words representation of email text, finding that no single algorithm dominated across all evaluation metrics and that feature representation quality was at least as important as the model itself.
+
+\citet{Basnet2008} explored an expanded feature set that combined textual cues with structural email properties such as sender domain and header anomalies, achieving strong results with an SVM classifier and reinforcing the value of metadata-aware models.
+
+More recently, deep learning and NLP techniques have advanced the state of the art. \citet{Alhogail2021} proposed a Graph Convolutional Network applied to email body text, reaching approximately 98\% accuracy and showing that representation-learning methods can capture subtle semantic patterns that traditional feature engineering often misses. The success of pre-trained language models such as BERT \citep{Devlin2019} has been a game-changer in the field of NLP: fine-tuned transformer models have been shown to exceed 95\% F1-score on phishing benchmarks by leveraging contextual word embeddings that capture the nuanced, tricky phrasing characteristic used in social-engineering attacks.
+
+Our work draws on insights from both traditional and neural approaches. We use the curated phishing email corpus released by \citet{Champa2024}, which aggregates data from the TREC, SpamAssassin, and CEAS corpora, and we experiment with Bag-of-Words baselines as well as fine-tuned transformer architectures to identify the most effective strategy for our balanced dataset.
 
 \section{Dataset}
 
-You should write about your dataset here, following the guidelines regarding item 2. This section may be 0.5-1 pages. Depending on your specific dataset, you may want to include subsections for the preprocessing, annotation, etc.
+\subsection{Overview}
+The dataset used for this project is a curated subset of the Figshare ``Seven Phishing Email Datasets'' \citep{Champa2024}, a large repository of publicly available email corpora compiled for phishing detection research. Our subset draws from five individual datasets within the repository: TREC-5, TREC-6, TREC-7, CEAS-08, and SpamAssassin. These sources were selected because they contain rich email metadata -- including sender address, receiver address, subject line, and a binary URL flag -- in addition to the raw email body, providing a realistic representation of the features that real-world email filters would use.
+
+\subsection{Data Collection and Balancing}
+To construct a balanced dataset, we extracted 1,500 phishing and 1,500 legitimate entries from each of the five sub-datasets, yielding a total of 15,000 data points with a perfect 50/50 class distribution. This design prevents any single source corpus from dominating the training signal and ensures sufficient data points from both classes. During collection, rows with missing or incomplete fields were skipped; because the original repository is sufficiently large, omitting these entries did not compromise the target sample size. Data collection proceeded by filtering on the provided label column and selecting entries sequentially until 1,500 valid data points per class were obtained from each sub-dataset. The final dataset was assembled on February~19,~2026.
+
+\subsection{Dataset Format}
+The data is stored as a single CSV file in which each row represents one email. The columns are summarized in Table~\ref{tab:dataset-format}.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lll}
+\hline
+\textbf{Column} & \textbf{Description} & \textbf{Type} \\
+\hline
+Sender   & Email address of the sender    & Text \\
+Receiver & Email address of the recipient & Text \\
+Date     & Timestamp of the email         & Text \\
+Subject  & Subject line text              & Text \\
+Body     & Body content text              & Text \\
+Label    & Ground-truth class             & Binary \\
+Urls     & Whether the email contains URLs & Binary \\
+\hline
+\end{tabular}
+\caption{Dataset schema. The \texttt{Label} column is coded as 0 (legitimate) or 1 (phishing); the \texttt{Urls} column is coded as 0 (no URLs) or 1 (contains URLs).}
+\label{tab:dataset-format}
+\end{table}
+
+\subsection{Preprocessing}
+Minimal preprocessing was applied to the raw data. HTML tags were stripped from the email body field so that classifiers operate on linguistic content rather than markup code. Date formats were standardized to a more human-readable format to ensure consistency and ease of understanding during the annotation phase. No additional stop-word removal, stemming, or lemmatization was performed at the dataset level; such transformations were instead applied within individual model pipelines to allow fair comparison across different feature-extraction strategies.
+
+\subsection{Annotation and Agreement}
+Although the dataset includes pre-existing labels from the original corpora, our team conducted a secondary annotation pass to verify label quality and to familiarize ourselves with the data. The first 480 samples of the dataset were selected for annotation and split equally among four annotators. Annotators then swapped sections and independently re-labeled the first 40 samples of their new partition, producing 160 double-annotated instances. Each sample took approximately 45~seconds to annotate. Inter-annotator agreement was measured using Cohen's Kappa on the 160 double-annotated data points, yielding $\kappa = 0.9$, indicating excellent agreement. The high agreement is partly attributable to each annotator's technical background, which made it easier to recognize common phishing indicators such as suspicious URLs, urgent language, and impersonated sender-domains.
+
+\subsection{Dataset Partitioning}
+The 15,000-instance corpus was partitioned into three non-overlapping subsets to support rigorous evaluation and mitigate overfitting: a training set comprising 70\% of the data (10,500~emails), a validation set comprising 15\% (2,250~emails) for hyperparameter tuning, and a held-out test set comprising the remaining 15\% (2,250~emails) whose labels are withheld during development.
+
+\subsection{Sensitive Content Disclaimer}
+Because the dataset contains real-world emails from public archives, annotators and users may encounter content related to financial fraud, fake legal threats, and adult-oriented spam. Some emails may also contain personally identifiable information such as names, email addresses, and phone numbers of employees. All data is used strictly for research and classification purposes in compliance with the terms of service of the Figshare platform.
 
 \section{Features}
 
@@ -159,7 +211,7 @@ You can use the command \verb|\citealp| (alternative cite without parentheses) t
 
 \subsection{References}
 
-\nocite{Ando2005,andrew2007scalable,rasooli-tetrault-2015}
+% Removed old template nocite entries
 
 Many websites where you can find academic papers also allow you to export a bib file for citation or bib formatted entry. Copy this into the \texttt{custom.bib} and you will be able to cite the paper in the \LaTeX{}. You can remove the example entries.
 
