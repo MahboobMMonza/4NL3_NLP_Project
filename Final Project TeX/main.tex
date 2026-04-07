@@ -194,6 +194,26 @@ The second component is a \texttt{roberta-base} sequence classification model. O
 
 The final classifier blends the predicted probabilities from both models. By testing different blend weights on the validation set, an optimal alpha of 0.55 was found, meaning RoBERTa's prediction contributed slightly more (55\%) than the Logistic Regression (45\%) to the final output. The classification threshold was also tuned from the default 0.5 to 0.46, maximizing the overall F1-score.
 
+\subsection{Model 3: RoBERTa Base}
+
+The RoBERTa Base model was fine-tuned for binary sequence classification using the
+Hugging~Face \texttt{transformers} library. The pretrained \texttt{roberta-base}
+checkpoint was loaded via \texttt{AutoModelForSequenceClassification} with
+\texttt{num\_labels=2}, and the corresponding tokenizer was used to encode all inputs
+with max-length padding and truncation to 512 tokens.
+
+Training was performed using the \texttt{Trainer} API with the following
+hyperparameters: a learning rate of $2 \times 10^{-5}$, a per-device batch size of 8
+with gradient accumulation over 4 steps (yielding an effective batch size of 32),
+mixed-precision training (\texttt{fp16=True}), weight decay of 0.01, and 5 training
+epochs. Model checkpoints were saved after each epoch, and the best checkpoint was
+automatically restored at the end of training based on the validation F1-score.
+
+The loss function used was the standard cross-entropy loss supplied internally by the
+\texttt{Trainer} API for classification heads. The AdamW optimizer (the default for
+Hugging~Face Trainer) was used throughout training. No additional learning-rate
+scheduler warmup was specified beyond the library defaults.
+
 \section{Results and Evaluation}
 
 What are your results? What did you implement and what did your classmates implement? What are your baselines? Refer to items 5 and 6. This may take around 0.5-1 pages.
@@ -209,6 +229,9 @@ For comparison, two general baselines were provided by the Codabench benchmark d
 \subsection{Model 1: RoBERTa and TF-IDF Ensemble}
 Final test evaluations were obtained by submitting the model's predictions to the Codabench evaluation system. On the test set, the ensemble model achieved an F1-score of 0.9844, an accuracy of 0.9844, a precision of 0.9884, and a recall of 0.9804. This demonstrates that the model successfully generalizes to unseen data, effortlessly outperforming both the provided majority vote baseline and the primary test benchmark.
 
+\subsection{Model 3: RoBERTa-Base}
+The Roberta-Base model achieved a test F1-Score of 0.9852 with a precision of 0.9893 and recall of 0.9849. This shows that the model beats the general baselines and is actually an improvement on trivial methods of prediction. This means that the table is actually worth it.
+
 \section{Error Analysis}
 
 What kind of errors are your models making? This doesn't have to be super complicated. Confusion matrices are great. Qualitative observations are also great. This means looking at many cases where your model is wrong (wrong class or high error) and looking for patterns yourself. What about the text might be giving it difficulty? Qualitative analysis is underappreciated and can often give you great insight into issues with your model. Examples are useful here. Refer to item 7. This may be around a half page.
@@ -217,6 +240,9 @@ What kind of errors are your models making? This doesn't have to be super compli
 Systematic examination of the evaluation metrics reveals distinct patterns in the errors the model makes. Specifically, the metrics show that the model is extremely good at classifying legitimate emails accurately without falsely flagging them, as indicated by the high precision (0.9884). It rarely produces false positives, which is critical for establishing real-world trust in a spam filter where missing important emails is highly disruptive.
 
 However, the slightly lower recall (0.9804) indicates that the model is comparatively worse at catching highly disguised threats, frequently resulting in false negatives. When comparing the performance of the components, the errors predominantly occur when sophisticated phishing attempts completely omit obvious spam keywords and mimic casual conversational tones flawlessly. Because the model relies substantially on engineered text patterns, these benign-looking emails fail to trigger the classifier. To specifically address these issues in future iterations, we recommend integrating external reputation-checking systems, such as automated URL domain cross-referencing or sender authentication parsing, rather than relying exclusively on the explicit text content.
+
+\subsection{Model 3: RoBERTa-Base}
+
 
 \section{Conclusions}
 
