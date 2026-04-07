@@ -4,8 +4,8 @@ import os
 
 # 1. Define paths where Codabench will place the files
 # Standard Codabench path mapping:
-submission_path = "/input/res/submission.csv"  # Where the participant's file lands
-ground_truth_path = "/ref/data/test_with_labels.csv" # Where your hidden file lives
+submission_path = "submission.csv"  # Where the participant's file lands
+ground_truth_path = "test_with_labels.csv" # Where your hidden file lives
 
 def evaluate():
     # Load data

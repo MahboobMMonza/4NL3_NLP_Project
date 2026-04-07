@@ -18,6 +18,7 @@
 \usepackage{inconsolata}
 \usepackage{graphicx}
 \usepackage{listings}
+\usepackage{float}
 
 % If the title and author information does not fit in the area allocated, uncomment the following
 %
@@ -153,7 +154,7 @@ The \textit{subject} and \textit{body} fields were concatenated to ensure the mo
 
 Finally, case normalization, stop-word removal, and stemming were implemented to drastically reduce the vocabulary size while maintaining the dataset's key distinguishing features.
 
-\subsection{Model 3: RoBERTa Base}
+\subsection{Model 3: RoBERTa-Base}
 Because this approach utilizes a fine-tuned architecture, representation learning was prioritized to take full advantage of the pretrained attention transformer. To effectively utilize this capacity, the text input was formatted as follows:
 
 \begin{lstlisting}[
@@ -193,6 +194,15 @@ The first component is a Logistic Regression model trained on the combined TF-ID
 The second component is a \texttt{roberta-base} sequence classification model. Optimization was performed using AdamW to minimize the standard cross-entropy loss function. This model was fine-tuned for 5 epochs with a batch size of 16, a learning rate of $1 \times 10^{-5}$ with a 15\% warmup ratio, and a weight decay of 0.01. The best model checkpoint was saved based on the validation F1-score.
 
 The final classifier blends the predicted probabilities from both models. By testing different blend weights on the validation set, an optimal alpha of 0.55 was found, meaning RoBERTa's prediction contributed slightly more (55\%) than the Logistic Regression (45\%) to the final output. The classification threshold was also tuned from the default 0.5 to 0.46, maximizing the overall F1-score.
+\subsection{Model 3: RoBERTa Base}
+
+The RoBERTa Base model was fine-tuned for binary classification through various finetuning and processing steps. The pretrained RoBERTa-base
+checkpoint was loaded via AutoModelForSequenceClassification with 2 labels to represent binary classifcication. Then, the corresponding tokenizer was used to encode all inputs with max-length padding and truncation to 512 tokens which is the maximum amount that RoBERTa can handle in its context.
+
+Training was performed using the Trainer API from the transformers package with the following
+hyperparameters: a learning rate of $2 \times 10^{-5}$, weight decay of 0.01, a per-device batch size of 8
+with gradient accumulation over 4 steps which yields an effective batch size of 32.
+Mixed-precision training was enabled fp16, and 5 training epochs was chosen to provide a better finetuned model. Model checkpoints were saved after each epoch, and the best checkpoint was automatically restored at the end of training based on the validation F1-score. The loss function used was the standard cross-entropy loss supplied internally by the by the Trainer API. The AdamW optimizer was used throughout training.
 
 \section{Results and Evaluation}
 
@@ -208,7 +218,8 @@ For comparison, two general baselines were provided by the Codabench benchmark d
 
 \subsection{Model 1: RoBERTa and TF-IDF Ensemble}
 Final test evaluations were obtained by submitting the model's predictions to the Codabench evaluation system. On the test set, the ensemble model achieved an F1-score of 0.9844, an accuracy of 0.9844, a precision of 0.9884, and a recall of 0.9804. This demonstrates that the model successfully generalizes to unseen data, effortlessly outperforming both the provided majority vote baseline and the primary test benchmark.
-
+\subsection{Model 3: RoBERTa-Base}
+Final test evaluations were obtained by submitting the model's predictions to the Codabench evaluation system. The model achieved an F1-score of 0.9853 which far surpasses the general baselines that we previously established. The accuracy was also 0.9853 with a precision of 0.9875 and recall of 0.9831. This proves this problem is not trivial and represents the improvements that can be gained in accuracy and f1-score by using this finetuned model.
 \section{Error Analysis}
 
 What kind of errors are your models making? This doesn't have to be super complicated. Confusion matrices are great. Qualitative observations are also great. This means looking at many cases where your model is wrong (wrong class or high error) and looking for patterns yourself. What about the text might be giving it difficulty? Qualitative analysis is underappreciated and can often give you great insight into issues with your model. Examples are useful here. Refer to item 7. This may be around a half page.
@@ -218,34 +229,41 @@ Systematic examination of the evaluation metrics reveals distinct patterns in th
 
 However, the slightly lower recall (0.9804) indicates that the model is comparatively worse at catching highly disguised threats, frequently resulting in false negatives. When comparing the performance of the components, the errors predominantly occur when sophisticated phishing attempts completely omit obvious spam keywords and mimic casual conversational tones flawlessly. Because the model relies substantially on engineered text patterns, these benign-looking emails fail to trigger the classifier. To specifically address these issues in future iterations, we recommend integrating external reputation-checking systems, such as automated URL domain cross-referencing or sender authentication parsing, rather than relying exclusively on the explicit text content.
 
+\subsection{Model 3: RoBERTa-Base}
+Overall this model performed extremely well as seen in the f1-score that we achieved for this. When considering the areas of improvement we looked to see where there were false positives when running predictions and the differences between recall and precision. Both the precision and recall were extremely high but we can see that it was ever so slightly more likely to predict phishing emails as legitimate as seen in the attached confusion matrix. This is was also seen in model 1 showing that the TF-IDF ensemble didn't manage to flesh out this issue. The causes of these issues could be due to limiting the max number of tokens for RoBERTa causing it to lose context which could help in classification. It could also struggle with extremely short spam mails as it may once again need further context.
+\begin{figure}[H]
+  \includegraphics[width=\columnwidth]{Images/confmatrix1.png}
+  \caption{Model 3 Confusion Matrix}
+  \label{fig:experiments}
+\end{figure}
 \section{Conclusions}
 
 Summarize your work briefly. Reflect on your implementation and areas for improvement. What do you suggest people work on next (mentioned also in item 7)? This should likely be less than 0.25 pages.
 
-\section{Template Notes}
+% \section{Template Notes}
 
-You can remove this section or comment it out, as it only contains instructions for how to use this template. You may use subsections in your document as you find appropriate.
+% You can remove this section or comment it out, as it only contains instructions for how to use this template. You may use subsections in your document as you find appropriate.
 
-\subsection{Tables and figures}
+% \subsection{Tables and figures}
 
-See Table~\ref{citation-guide} for an example of a table and its caption.
-See Figure~\ref{fig:experiments} for an example of a figure and its caption.
+% See Table~\ref{citation-guide} for an example of a table and its caption.
+% See Figure~\ref{fig:experiments} for an example of a figure and its caption.
 
 
-\begin{figure}[t]
-  \includegraphics[width=\columnwidth]{example-image-golden}
-  \caption{A figure with a caption that runs for more than one line.
-    Example image is usually available through the \texttt{mwe} package
-    without even mentioning it in the preamble.}
-  \label{fig:experiments}
-\end{figure}
+% \begin{figure}[t]
+%   \includegraphics[width=\columnwidth]{example-image-golden}
+%   \caption{A figure with a caption that runs for more than one line.
+%     Example image is usually available through the \texttt{mwe} package
+%     without even mentioning it in the preamble.}
+%   \label{fig:experiments}
+% \end{figure}
 
-\begin{figure*}[t]
-  \includegraphics[width=0.48\linewidth]{example-image-a} \hfill
-  \includegraphics[width=0.48\linewidth]{example-image-b}
-  \caption {A minimal working example to demonstrate how to place
-    two images side-by-side.}
-\end{figure*}
+% \begin{figure*}[t]
+%   \includegraphics[width=0.48\linewidth]{example-image-a} \hfill
+%   \includegraphics[width=0.48\linewidth]{example-image-b}
+%   \caption {A minimal working example to demonstrate how to place
+%     two images side-by-side.}
+% \end{figure*}
 
 
 \subsection{Citations}
