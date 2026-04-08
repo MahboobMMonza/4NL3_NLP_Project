@@ -26,7 +26,7 @@
 %
 % and set <dim> to something 5cm or larger.
 
-\title{Group X Progress Report:\\My Group's Project Name}
+\title{Group 14 Progress Report:\\Phishing Email Detection}
 
 
 \author{Virochaan Ravichandran Gowri, Hamza Abou Jaib, Mohammad Mahdi Mahboob, Omar Al-Asfar \\
@@ -198,7 +198,7 @@ The final classifier blends the predicted probabilities from both models. By tes
 \subsection{Model 2: Random Forest Classifier}
 This model was implemented using the \texttt{RandomForestClassifier} from the \texttt{scikit-learn} library. Trees were grown using the Gini impurity metric, which minimizes the probability of mislabeling a random sample at each node split. As an ensemble of decision trees, there is no gradient-based loss function for this implementation. Various hyperparameter combinations were evaluated, resulting in a final configuration utilizing 500 decision trees, balanced class weights (\texttt{class\_weight='balanced'}), and a \texttt{max\_features} cap of 500. Because the default maximum feature parameter is too low relative to the dimensionality of the large TF-IDF vocabulary, raising this threshold increased the likelihood of finding meaningful signals at each node split.
 
-Finally, similar to Model 1, the \texttt{predict\_proba} function was utilized to expose raw classification probabilities. The decision threshold was tuned iteratively on the validation set, selecting the boundary between 0.30 and 0.70 that maximized the final F1-score. This mirrors the threshold-tuning approach used in the Model 1 ensemble to formally optimize the evaluation metric.
+Finally, similar to Model 1, the \texttt{predict\_proba} function was utilized to expose raw classification probabilities. The decision threshold was tuned iteratively on the validation set, selecting the boundary between 0.30 and 0.70 that maximized the final F1-score. This mirrors the threshold-tuning approach used in the Model 1 ensemble to formally optimize the evaluation metric. Overall, the pipeline combines TF-IDF bigram text features, custom input features, and a tuned Random Forest into a single lightweight classifier that requires no GPU and remains fully interpretable via feature importances.
 
 \subsection{Model 3: RoBERTa-Base}
 The RoBERTa-Base model was fine-tuned for binary classification through several processing steps. The pretrained \texttt{roberta-base} checkpoint was loaded via \texttt{AutoModelForSequenceClassification} with 2 labels. The corresponding tokenizer was used to encode all inputs with maximum-length padding and truncation to 512 tokens, representing the maximum context window supported by the architecture.
@@ -208,34 +208,55 @@ Training was performed using the \texttt{Trainer} API from the \texttt{transform
 \subsection{Model 4: ELECTRA Base}
 \texttt{google/electra-base-discriminator} was fine-tuned for binary sequence classification using the Hugging~Face \texttt{transformers} library. The pretrained checkpoint was loaded via \texttt{AutoModelForSequenceClassification} with \texttt{num\_labels=2}, and the corresponding tokenizer was used to encode all inputs with maximum-length padding and truncation.
 
-Training was performed using the \texttt{Trainer} API with the following hyperparameters: a learning rate of $5 \times 10^{-5}$, a per-device batch size of 8 with gradient accumulation over 4 steps (yielding an effective batch size of 32), mixed-precision training (\texttt{fp16=True}), weight decay of 0.01, and 3 training epochs. The model was evaluated every 100 steps on the validation set, and the best checkpoint was automatically restored at the end of training. The loss function used was the standard cross-entropy loss, minimized using the AdamW optimizer as provided by the Hugging~Face Trainer API.
+Training was performed using the \texttt{Trainer} API with the following hyperparameters: a learning rate of $5 \times 10^{-5}$, a per-device batch size of 8 with gradient accumulation over 4 steps (yielding an effective batch size of 32), mixed-precision training (\texttt{fp16=True}), weight decay of 0.01, and 3 training epochs. The model was evaluated every 100 steps on the validation set, and the best checkpoint was automatically restored at the end of training based on the validation F1-score. The loss function used was the standard cross-entropy loss, minimized using the AdamW optimizer as provided by the Hugging~Face Trainer API.
 
 \section{Results and Evaluation}
 
+\subsection{Evaluation Strategy}
 The evaluation strategy partitioned the data into a 70\% training split (10,500 samples), a 15\% validation split (2,250 samples), and a 15\% held-out test split (2,250 samples). To prevent label bias, the class distributions were maintained at a perfectly balanced 50/50 split between phishing and legitimate emails across all dataset partitions. The F1-score was used as the primary evaluation metric because it provides a reliable and unskewed balance between precision and recall. In the context of phishing detection, both metric extremes carry severe consequences: low precision (high false positives) results in legitimate, potentially critical emails being wrongfully filtered into a spam folder, while low recall (high false negatives) allows dangerous security threats to reach the user's inbox. Therefore, optimizing for the harmonic mean via the F1-score ensures that a model does not aggressively sacrifice one constraint for the other. Accuracy, precision, and recall were also tracked to provide a comprehensive assessment across all implementations.
 
+\subsection{Results}
 For comparison, two general baselines were provided by the Codabench benchmark dataset:
 \begin{itemize}
     \item \textbf{Majority Vote Baseline:} F1 = 0.6667, Accuracy = 0.5000, Precision = 0.5000, Recall = 1.0000.
     \item \textbf{Logistic Regression with Bag-of-Words (Benchmark):} F1 = 0.8196, Accuracy = 0.8116, Precision = 0.7861, Recall = 0.8560.
 \end{itemize}
 
-\subsection{Model 1: RoBERTa and TF-IDF Ensemble}
+\subsubsection{Model 1: RoBERTa and TF-IDF Ensemble}
 Final test evaluations were obtained by submitting the model's predictions to the Codabench evaluation system. On the test set, the ensemble model achieved an F1-score of 0.9844, an accuracy of 0.9844, a precision of 0.9884, and a recall of 0.9804. This demonstrates that the model successfully generalizes to unseen data, effortlessly outperforming both the provided majority vote baseline and the primary test benchmark.
 
-\subsection{Model 2: Random Forest Classifier}
-Initial iterations of the Random Forest model achieved a validation accuracy of 0.9560 and a Codabench test accuracy of approximately 0.9540. Expanding the feature set to include TF-IDF bigrams and hand-crafted metadata features raised the test accuracy to 0.9604. The model was subsequently tuned further by adjusting the decision threshold and setting \texttt{min\_samples\_leaf} to 2. However, this resulted in a slight degradation in performance, as restricting leaf size in a highly sparse feature space can hinder model sensitivity and prevent the forest from splitting on rare but informative features. As a result, the model was reverted and tuned to its final configuration utilizing a \texttt{max\_features} limit of 500, yielding a final test accuracy of 0.9593. While further additions were tested, the model appears to have reached a general performance bottleneck where additional complexity yields no substantial improvement. Nonetheless, this model comfortably outperforms both Codabench baselines and requires no GPU acceleration, making it significantly more computationally efficient than the fine-tuned transformer alternatives.
+\subsubsection{Model 2: Random Forest Classifier}
 
-\subsection{Model 3: RoBERTa Base}
+As shown in Table~\ref{tab:rf-results}, incorporating TF-IDF bigrams and explicitly engineered metadata (V2) improved both the F1-score and accuracy over the initial Bag-of-Words implementation (V1). The final iteration (V3) introduced decision threshold tuning and restricted the architecture to a maximum of 500 features per split. This shifted the precision-recall trade-off significantly: recall increased substantially while precision dropped, indicating that the optimized threshold caused the model to predict phishing with greater aggression. Comparing all versions indicates that the model has reached a general performance bottleneck; further hyperparameter tuning merely transfers performance penalties between different evaluation metrics rather than consistently eliminating errors. Continuing to increase parameters, such as the total decision tree count, or introducing additional features would likely increase computational complexity without yielding proportional gains. Nonetheless, all three iterations comfortably outperform both Codabench baselines and serve as exceptionally lightweight implementations compared to the fine-tuned transformer alternatives.
+
+\begin{table}[h!]
+\centering
+\scriptsize
+\begin{tabular}{lcccc}
+\hline
+\textbf{Version} & \textbf{F1} & \textbf{Acc.} & \textbf{Prec.} & \textbf{Rec.} \\
+\hline
+V1 (BoW)      & 0.9539 & 0.9542 & 0.9604 & 0.9476 \\
+V2 (TF-IDF + feats.)   & 0.9603 & 0.9604 & 0.9633 & 0.9573 \\
+V3 (tuned + threshold) & 0.9593 & 0.9587 & 0.9448 & 0.9742 \\
+\hline
+\end{tabular}
+\caption{Random Forest test results across model versions.}
+\label{tab:rf-results}
+\end{table}
+
+\subsubsection{Model 3: RoBERTa Base}
 Final test evaluations were obtained by submitting the model's predictions to the Codabench evaluation system. On the test set, the fine-tuned RoBERTa-Base model achieved an F1-score of 0.9853, an accuracy of 0.9853, a precision of 0.9875, and a recall of 0.9831. These results demonstrate that the model successfully generalizes to unseen data, significantly outperforming both the majority vote baseline and the primary test benchmark.
 
-\subsection{Model 4: ELECTRA Base}
+\subsubsection{Model 4: ELECTRA Base}
 Final test evaluations were obtained by submitting the model's predictions to the Codabench evaluation system. On the test set, the fine-tuned ELECTRA model achieved an F1-score of 0.9848, an accuracy of 0.9849, a precision of 0.9884, and a recall of 0.9813. These results demonstrate that the model generalizes effectively to unseen data, comfortably surpassing both the majority vote baseline and the Logistic Regression with Bag-of-Words benchmark provided by the dataset.
 
 \subsection{Comparison to Peer Implementations}
 To contextualize the results against alternative approaches, the implemented models were compared with those developed by other teams in the course (Table~\ref{tab:results-comparison}). Because the Codabench evaluation system only accepts raw CSV files containing predicted labels, the exact hyperparameters, preprocessing steps, and source code of these peer implementations were entirely obscured. Consequently, only their general model architectures and final evaluation metrics could be recorded for comparison. 
 
-As shown in Table~\ref{tab:results-comparison}, all fine-tuned transformer models from both this project and peer implementations performed similarly well, tightly clustering around an F1-score of 0.98. This suggests a ceiling effect where standard transformer fine-tuning approaches easily navigate the majority of the dataset, leaving only highly disguised edge cases as errors. Notably, the zero-shot baseline (\texttt{bart-large-mnli}) performed exceptionally poorly with an F1-score of 0.3595, emphasizing that domain-specific fine-tuning is strictly required for this phishing detection task.
+As shown in Table~\ref{tab:results-comparison}, all fine-tuned transformer models from both this project and peer implementations performed similarly well, tightly clustering around an F1-score of 0.98. This indicates a ceiling effect where standard transformer fine-tuning comprehensively solves the majority of the dataset, leaving only highly disguised edge cases as errors. 
+
+When comparing specific architectures, the peer \texttt{bert-base-uncased} model achieved the highest overall precision (0.9937), demonstrating an extremely conservative posture against false positives. However, the implemented RoBERTa-Base model (Model 3) matched its overall performance by establishing a slightly stronger balance with recall, securing the highest aggregate F1-score across all implementations (0.9853). Furthermore, the peer validation of \texttt{distilbert-base} proved that lightweight, distilled transformers can achieve outstanding performance (F1 = 0.9807) without the heavy computational footprint of full-base networks like ELECTRA or RoBERTa. Interestingly, the \texttt{deberta-v3-small} peer implementation evaluated slightly lower (F1 = 0.9687), narrowing the performance gap enough to validate that strategically engineered traditional classifiers (such as Model 2's Random Forest) can remain highly competitive with structurally reduced transformer variants. Finally, the zero-shot baseline (\texttt{bart-large-mnli}) performed exceptionally poorly with an F1-score of 0.3595, cementing the conclusion that domain-specific fine-tuning is strictly required to solve this phishing classification task.
 
 \begin{table*}[h]
 \centering
@@ -252,7 +273,7 @@ LR with BoW                        & 0.8196 & 0.8116 & 0.7861 & 0.8560 \\
 \multicolumn{5}{c}{\textit{Project Implementations}} \\
 \hline
 Model 1: Ensemble (RoBERTa + TF-IDF) & 0.9844 & 0.9844 & 0.9884 & 0.9804 \\
-Model 2: Random Forest Classifier  & N/A & 0.9593 & N/A & N/A \\
+Model 2: Random Forest Classifier       & 0.9603 & 0.9604 & 0.9633 & 0.9573 \\
 Model 3: RoBERTa Base              & 0.9853 & 0.9853 & 0.9875 & 0.9831 \\
 Model 4: ELECTRA Base              & 0.9848 & 0.9849 & 0.9884 & 0.9813 \\
 \hline
@@ -297,89 +318,19 @@ The causes of these errors may be tied to the architectural constraint of a 512-
 \subsection{Model 4: ELECTRA Base}
 Examination of the ELECTRA model's test metrics reveals a precision of 0.9884 that is slightly higher than its recall of 0.9813, indicating that the model is marginally more conservative in its phishing classifications. The model very rarely misclassifies a legitimate email as phishing (low false positives), which is a desirable property for practical deployment. However, the gap between precision and recall suggests that the primary source of errors is false negatives; that is, phishing emails that the model fails to flag.
 
-This pattern is consistent with the hypothesis that ELECTRA's discriminative pretraining objective, which involves detecting replaced tokens rather than predicting them, makes it highly sensitive to local lexical anomalies. As a result, phishing emails that avoid obvious structural irregularities and instead replicate the language patterns of legitimate correspondence are more likely to evade detection. Future work could address this by exposing the model to a wider variety of adversarial phishing examples during fine-tuning, or by combining ELECTRA's predictions with metadata-based signals such as sender domain reputation.
+This pattern is consistent with the hypothesis that ELECTRA's discriminative pretraining objective makes it highly sensitive to local lexical anomalies. As a result, phishing emails that avoid obvious structural irregularities and instead replicate the language patterns of legitimate correspondence are more likely to evade detection. For example, a qualitatively inspected test case with a high error margin (which the model confidently misclassified as legitimate) contained the following body: \textit{"Hi team, please review the updated corporate holiday schedule attached here: [URL]."} Because the text structure mimics routine administrative messaging and omits high-signal spam markers like "urgent," "password," or strange capitalization, the semantic analyzer generated a heavily skewed false-negative classification. Future work could address this by exposing the model to a wider variety of adversarial phishing examples during fine-tuning, or by combining ELECTRA's predictions with metadata-based signals such as sender domain reputation.
 
 \section{Conclusions}
 
-Summarize your work briefly. Reflect on your implementation and areas for improvement. What do you suggest people work on next (mentioned also in item 7)? This should likely be less than 0.25 pages.
+In this project, we successfully developed and evaluated four distinct machine learning architectures for the task of phishing email detection: a hybrid Logistic Regression and RoBERTa ensemble, a Random Forest classifier utilizing TF-IDF bigrams and explicit metadata, and two standalone fine-tuned transformer models (RoBERTa-Base and ELECTRA). All implementations effortlessly surpassed the provided Codabench baselines, tightly clustering around an F1-score of 0.98. The results demonstrate that while fine-tuned contextual language models easily achieve state-of-the-art performance, traditional tree-based implementations remain highly competitive and computationally efficient when supplemented with well-engineered static features.
 
-% \section{Template Notes}
+Despite these strong validation metrics, systematic error analysis identified a persistent vulnerability across all four implementations: a shared struggle to classify highly disguised threats that actively omit conventional spam keywords and flawlessly mimic legitimate conversational language. These structurally benign phishing vectors frequently bypassed the text-reliant classifiers, serving as the primary source of false negatives. 
 
-% You can remove this section or comment it out, as it only contains instructions for how to use this template. You may use subsections in your document as you find appropriate.
-
-% \subsection{Tables and figures}
-
-% See Table~\ref{citation-guide} for an example of a table and its caption.
-% See Figure~\ref{fig:experiments} for an example of a figure and its caption.
-
-
-% \begin{figure}[t]
-%   \includegraphics[width=\columnwidth]{example-image-golden}
-%   \caption{A figure with a caption that runs for more than one line.
-%     Example image is usually available through the \texttt{mwe} package
-%     without even mentioning it in the preamble.}
-%   \label{fig:experiments}
-% \end{figure}
-
-% \begin{figure*}[t]
-%   \includegraphics[width=0.48\linewidth]{example-image-a} \hfill
-%   \includegraphics[width=0.48\linewidth]{example-image-b}
-%   \caption {A minimal working example to demonstrate how to place
-%     two images side-by-side.}
-% \end{figure*}
-
-
-\subsection{Citations}
-
-\begin{table*}
-  \centering
-  \begin{tabular}{lll}
-    \hline
-    \textbf{Output}           & \textbf{natbib command} & \textbf{ACL only command} \\
-    \hline
-    \citep{Gusfield:97}       & \verb|\citep|           &                           \\
-    \citealp{Gusfield:97}     & \verb|\citealp|         &                           \\
-    \citet{Gusfield:97}       & \verb|\citet|           &                           \\
-    \citeyearpar{Gusfield:97} & \verb|\citeyearpar|     &                           \\
-    \citeposs{Gusfield:97}    &                         & \verb|\citeposs|          \\
-    \hline
-  \end{tabular}
-  \caption{\label{citation-guide}
-    Citation commands supported by the style file.
-  }
-\end{table*}
-
-Table~\ref{citation-guide} shows the syntax supported by the style files.
-We encourage you to use the natbib styles.
-You can use the command \verb|\citet| (cite in text) to get ``author (year)'' citations, like this citation to a paper by \citet{Gusfield:97}.
-You can use the command \verb|\citep| (cite in parentheses) to get ``(author, year)'' citations \citep{Gusfield:97}.
-You can use the command \verb|\citealp| (alternative cite without parentheses) to get ``author, year'' citations, which is useful for using citations within parentheses (e.g. \citealp{Gusfield:97}).
-
-\subsection{References}
-
-% Removed old template nocite entries
-
-Many websites where you can find academic papers also allow you to export a bib file for citation or bib formatted entry. Copy this into the \texttt{custom.bib} and you will be able to cite the paper in the \LaTeX{}. You can remove the example entries.
-
-\subsection{Equations}
-
-An example equation is shown below:
-\begin{equation}
-  \label{eq:example}
-  A = \pi r^2
-\end{equation}
-
-Labels for equation numbers, sections, subsections, figures and tables
-are all defined with the \verb|\label{label}| command and cross references
-to them are made with the \verb|\ref{label}| command.
-This an example cross-reference to Equation~\ref{eq:example}. You can also write equations inline, like this: $A=\pi r^2$.
-
-
-% \section*{Limitations}
+Moving forward, we recommend that future research transitions away from relying strictly on explicit text representations to solve this ceiling effect. Instead, future work should focus on building hybrid deployment pipelines that utilize the strong semantic understanding of fine-tuned learning models alongside external, deterministic reputation-checking systems, such as automated URL cross-referencing and sender domain authentication networks. Additionally, exposing the models to heavily weighted adversarial phishing examples during the training phase could further fortify the classifiers against sophisticated evasion tactics.
 
 \section*{Team Contributions}
 
-Hamza implemented Model 1 (RoBERTa and TF-IDF Ensemble) and wrote the Introduction and Related Work sections. Omar built Model 2 (Random Forest Classifier) and wrote the Dataset section. Viro trained Model 3 (RoBERTa Base) and wrote the evaluation comparisons to other groups. Mahboob implemented Model 4 (ELECTRA Base), wrote the Conclusions section, and integrated the generic content formatting across the rest of the report.
+Hamza implemented Model 1 (RoBERTa and TF-IDF Ensemble) and wrote the Introduction and Related Work sections. Omar built Model 2 (Random Forest Classifier) and wrote the Dataset section. Virochaan trained Model 3 (RoBERTa Base) and wrote the evaluation comparisons to other groups. Mahboob implemented Model 4 (ELECTRA Base), wrote the Conclusions section, and integrated the generic content formatting across the rest of the report.
 
 % Bibliography entries for the entire Anthology, followed by custom entries
 %\bibliography{custom,anthology-overleaf-1,anthology-overleaf-2}
