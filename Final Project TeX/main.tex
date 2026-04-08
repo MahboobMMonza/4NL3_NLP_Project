@@ -224,7 +224,24 @@ For comparison, two general baselines were provided by the Codabench benchmark d
 Final test evaluations were obtained by submitting the model's predictions to the Codabench evaluation system. On the test set, the ensemble model achieved an F1-score of 0.9844, an accuracy of 0.9844, a precision of 0.9884, and a recall of 0.9804. This demonstrates that the model successfully generalizes to unseen data, effortlessly outperforming both the provided majority vote baseline and the primary test benchmark.
 
 \subsection{Model 2: Random Forest Classifier}
-The initial model consisting of just Random Forest achieved a validation accuracy of 95.6\% and a Codabench test score of approximately 95.4\%. Adding TF-IDF bigrams and additional input features raised the competition accuracy to 96.04\%, a 0.64 improvement. The model was subsequently tuned again with the addition of decision threshold tuning, and setting min\_samples\_leaf to 2. However, this resulted in a slight degradation in performance compared to the previous configuration. In a sparse feature space, this approach can hinder model sensitivity, and prevent the forest from splitting on rare but informative features. As a result, the model was again tuned to reach its final configuration by setting max\_features=500. This resulted in a test accuracy of 95.93\%. Although it was believed that this addition would increase the likelihood that informative features are considered at each node, the model appears to have reached a general bottleneck where further changes just increase complexity with no substantial improvement. Nontheless, this model still outperforms both Codabench baselines and requires no GPU resources, making it far lighter than the alternatives.
+
+As shown in Table~\ref{tab:rf-results}, adding TF-IDF bigrams and manually engineered features in V2 improved F1 and accuracy over the initial implementation. V3 introduced threshold tuning and max\_features=500, which shifted the precision-recall trade-off noticeably. Recall increased substantially while precision dropped, possible suggesting that the lower threshold caused the model to predict more aggressively. Through comparison of all versions, it appears that the model has reached a general performance bottleneck where further tuning causes errors or performance declines to transition to different metrics instead of just reducing them. Continuing to increase parameters, such as n\_estimators, or introducing additional features will likely just increase the complexity without proportional gains. Nonetheless, all three versions comfortably outperform both Codabench baselines and serve as far lighter implementations compared to the alternatives.
+
+\begin{table}[h!]
+\centering
+\scriptsize
+\begin{tabular}{lcccc}
+\hline
+\textbf{Version} & \textbf{F1} & \textbf{Acc.} & \textbf{Prec.} & \textbf{Rec.} \\
+\hline
+V1 (BoW)      & 0.9539 & 0.9542 & 0.9604 & 0.9476 \\
+V2 (TF-IDF + feats.)   & 0.9603 & 0.9604 & 0.9633 & 0.9573 \\
+V3 (tuned + threshold) & 0.9593 & 0.9587 & 0.9448 & 0.9742 \\
+\hline
+\end{tabular}
+\caption{Random Forest test results across model versions.}
+\label{tab:rf-results}
+\end{table}
 
 \subsection{Model 3: RoBERTa Base}
 Final test evaluations were obtained by submitting the model's predictions to the Codabench evaluation system. On the test set, the fine-tuned RoBERTa-Base model achieved an F1-score of 0.9853, an accuracy of 0.9853, a precision of 0.9875, and a recall of 0.9831. These results demonstrate that the model successfully generalizes to unseen data, significantly outperforming both the majority vote baseline and the primary test benchmark.
@@ -252,6 +269,7 @@ LR with BoW                        & 0.8196 & 0.8116 & 0.7861 & 0.8560 \\
 \multicolumn{5}{c}{\textit{Project Implementations}} \\
 \hline
 Model 1: Ensemble (RoBERTa + TF-IDF) & 0.9844 & 0.9844 & 0.9884 & 0.9804 \\
+Model 2: Random Forest Classifier       & 0.9603 & 0.9604 & 0.9633 & 0.9573 \\
 Model 3: RoBERTa Base              & 0.9853 & 0.9853 & 0.9875 & 0.9831 \\
 Model 4: ELECTRA Base              & 0.9848 & 0.9849 & 0.9884 & 0.9813 \\
 \hline
