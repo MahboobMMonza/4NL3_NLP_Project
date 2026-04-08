@@ -579,7 +579,7 @@ TSWLatexianTemp*
 
 # TeXnicCenter
 *.tps
-
+*.zip
 # auto folder when using emacs and auctex
 ./auto/*
 *.el
