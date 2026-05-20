@@ -40,8 +40,7 @@ set up your environment by installing standard data science and NLP
 dependencies:
 
 ```bash
-pip install numpy pandas scikit-learn
-torch transformers matplotlib tqdm
+pip install numpy pandas scikit-learn torch transformers matplotlib tqdm
 ```
 
 ### 2. Running Baselines
